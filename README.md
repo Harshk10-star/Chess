@@ -2,7 +2,7 @@
 
 ### `npm i`
 in server folder
-and client folder
+and src folder
 
 MongoDB: https://www.mongodb.com/try/download/community
 
