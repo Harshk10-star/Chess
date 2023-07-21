@@ -1,5 +1,6 @@
 # Dependencies
-'npm i'
+
+### `npm i`
 in server folder
 and client folder
 
