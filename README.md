@@ -1,3 +1,11 @@
+# Dependencies
+### 'npm i'
+in server folder
+and client folder
+
+MongoDB: https://www.mongodb.com/try/download/community
+
+
 # Getting Started with Create React App
 
 This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
