@@ -26,6 +26,25 @@
    background-color: blue;
 }
 
+#game-status{
+   text-align: center;
+   margin-bottom: 12px;
+   color: #e8e8e8;
+   font-family: Georgia, "Times New Roman", serif;
+}
+
+#turn-status{
+   font-size: 1.25rem;
+   margin: 0 0 4px;
+   text-transform: capitalize;
+}
+
+#move-count{
+   font-size: 0.95rem;
+   margin: 0;
+   opacity: 0.85;
+}
+
 #pawn-promotion{
    height: 300px;
    background-color: aqua;
