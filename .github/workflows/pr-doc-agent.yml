@@ -96,7 +96,7 @@ jobs:
             --post-comment \
             --write-drafts-dir "$GITHUB_WORKSPACE"
 
-      - name: Commit AI-Generated docs (skip dry-run)
+      - name: Commit AI-Generated docs / HITL snapshot (skip dry-run)
         if: ${{ !contains(github.event.comment.body || inputs.comment, '--dry-run') }}
         run: |
           git config user.name "github-actions[bot]"
@@ -106,5 +106,10 @@ jobs:
             echo "No AI-Generated file changes"
             exit 0
           fi
-          git commit -m "docs: update AI-Generated documentation from @createdocs"
+          if [ -d AI-Generated/.hitl ] && [ -n "$(find AI-Generated/.hitl -name '*.json' 2>/dev/null)" ]; then
+            MSG="docs: store HITL snapshot awaiting human approve/edit/reject"
+          else
+            MSG="docs: update AI-Generated documentation from @createdocs"
+          fi
+          git commit -m "$MSG"
           git push
