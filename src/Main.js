@@ -288,6 +288,12 @@ const updateWhiteKingPos = (x, y) => {
     </div>
         */
   
+  const statusLabel = !checkz
+    ? `Checkmate — ${turn === "white" ? "black" : "white"} wins`
+    : checkKing
+      ? `${turn} is in check`
+      : `${turn} to move`;
+
   return (
     <>
 
@@ -298,7 +304,10 @@ const updateWhiteKingPos = (x, y) => {
 
     </div>
     <div id='app'>
- 
+      <div id="game-status" aria-live="polite">
+        <p id="turn-status">{statusLabel}</p>
+        <p id="move-count">{moves.length} move{moves.length === 1 ? "" : "s"} played</p>
+      </div>
 
  <Board blackKing={blackKing} whiteKing={whiteKing} setKingPos={setKingPos} updatePositions={updatePositions} positions={positions} setPositions={setPositions} selected={selected} setSelected={setSelected} setSelectedPiece={setSelectedPiece} selectedPiece={selectedPiece}/>
  <button id='reset' onClick={reset}>Reset</button>
