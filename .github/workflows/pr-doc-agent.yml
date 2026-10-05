@@ -74,7 +74,10 @@ jobs:
             echo "Add repo secret GH_PAT with read access to Harshk10-star/docsagent" >&2
             exit 1
           fi
-          uv pip install --system "pr-doc-agent @ git+https://x-access-token:${GH_PAT}@github.com/Harshk10-star/docsagent.git"
+          uv venv "$RUNNER_TEMP/prdoc-venv"
+          echo "$RUNNER_TEMP/prdoc-venv/bin" >> "$GITHUB_PATH"
+          uv pip install --python "$RUNNER_TEMP/prdoc-venv/bin/python" \
+            "pr-doc-agent @ git+https://x-access-token:${GH_PAT}@github.com/Harshk10-star/docsagent.git"
 
       - name: Run agent
         env:
