@@ -1,0 +1,107 @@
+name: PR Doc Agent
+
+on:
+  issue_comment:
+    types: [created]
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: Pull request number
+        required: true
+        type: string
+      comment:
+        description: Trigger comment body
+        required: true
+        default: "@createdocs --dry-run"
+        type: string
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+jobs:
+  createdocs:
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      (
+        github.event.issue.pull_request &&
+        github.event.comment.user.login != 'github-actions[bot]' &&
+        (
+          contains(github.event.comment.body, '@createdocs') ||
+          contains(github.event.comment.body, '/createdocs')
+        )
+      )
+    runs-on: ubuntu-latest
+    steps:
+      - name: Resolve PR head
+        id: head
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          EVENT_NAME: ${{ github.event_name }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          INPUT_PR: ${{ inputs.pr_number }}
+        run: |
+          set -euo pipefail
+          if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+            PR="$INPUT_PR"
+          else
+            PR="$ISSUE_NUMBER"
+          fi
+          DATA=$(gh api "repos/${{ github.repository }}/pulls/$PR")
+          echo "pr=$PR" >> "$GITHUB_OUTPUT"
+          echo "ref=$(echo "$DATA" | jq -r .head.ref)" >> "$GITHUB_OUTPUT"
+          echo "sha=$(echo "$DATA" | jq -r .head.sha)" >> "$GITHUB_OUTPUT"
+          echo "repo=$(echo "$DATA" | jq -r .head.repo.full_name)" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout PR branch
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ steps.head.outputs.repo }}
+          ref: ${{ steps.head.outputs.ref }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+
+      - name: Install PR Doc Agent
+        env:
+          GH_PAT: ${{ secrets.GH_PAT }}
+        run: |
+          set -euo pipefail
+          # Private agent package: https://github.com/Harshk10-star/docsagent
+          if [ -z "${GH_PAT:-}" ]; then
+            echo "Add repo secret GH_PAT with read access to Harshk10-star/docsagent" >&2
+            exit 1
+          fi
+          uv pip install --system "pr-doc-agent @ git+https://x-access-token:${GH_PAT}@github.com/Harshk10-star/docsagent.git"
+
+      - name: Run agent
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          PR_DOC_AGENT_MODEL: ${{ vars.PR_DOC_AGENT_MODEL || 'gpt-4.1-mini' }}
+          PR_DOC_AGENT_AUTO_APPROVE_HITL: "true"
+          # Hard limit: agent may only write under Chess/AI-Generated/
+          PR_DOC_AGENT_OUTPUT_ROOT: AI-Generated
+          PR_NUMBER: ${{ steps.head.outputs.pr }}
+          PR_COMMENT: ${{ github.event_name == 'workflow_dispatch' && inputs.comment || github.event.comment.body }}
+        run: |
+          pr-doc-agent github-run \
+            --pr "$PR_NUMBER" \
+            --post-comment \
+            --write-drafts-dir "$GITHUB_WORKSPACE"
+
+      - name: Commit AI-Generated docs (skip dry-run)
+        if: ${{ !contains(github.event.comment.body || inputs.comment, '--dry-run') }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add AI-Generated
+          if git diff --staged --quiet; then
+            echo "No AI-Generated file changes"
+            exit 0
+          fi
+          git commit -m "docs: update AI-Generated documentation from @createdocs"
+          git push
