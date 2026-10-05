@@ -1,5 +1,7 @@
 # AI-Generated
 
-Files in this folder are produced or updated by the **PR Doc Agent** when someone comments `@createdocs` on a pull request.
+Files in this folder are produced or updated for documentation of this Chess project.
 
-Do not put hand-maintained product code here. Human-authored docs can live elsewhere; agent output stays under `AI-Generated/`.
+- Human product code stays outside this folder.
+- Agent output from `@createdocs` is restricted to `AI-Generated/`.
+- Initial bootstrap docs landed with the PR Doc Agent integration PR.
