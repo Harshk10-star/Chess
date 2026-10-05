@@ -34,11 +34,31 @@ jobs:
       )
     runs-on: ubuntu-latest
     steps:
+      - name: Resolve PR head
+        id: head
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          EVENT_NAME: ${{ github.event_name }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          INPUT_PR: ${{ inputs.pr_number }}
+        run: |
+          set -euo pipefail
+          if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+            PR="$INPUT_PR"
+          else
+            PR="$ISSUE_NUMBER"
+          fi
+          DATA=$(gh api "repos/${{ github.repository }}/pulls/$PR")
+          echo "pr=$PR" >> "$GITHUB_OUTPUT"
+          echo "ref=$(echo "$DATA" | jq -r .head.ref)" >> "$GITHUB_OUTPUT"
+          echo "sha=$(echo "$DATA" | jq -r .head.sha)" >> "$GITHUB_OUTPUT"
+          echo "repo=$(echo "$DATA" | jq -r .head.repo.full_name)" >> "$GITHUB_OUTPUT"
+
       - name: Checkout PR branch
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.pull_request.head.ref || github.ref }}
-          repository: ${{ github.event.pull_request.head.repo.full_name || github.repository }}
+          repository: ${{ steps.head.outputs.repo }}
+          ref: ${{ steps.head.outputs.ref }}
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Install uv
@@ -63,8 +83,9 @@ jobs:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           PR_DOC_AGENT_MODEL: ${{ vars.PR_DOC_AGENT_MODEL || 'gpt-4.1-mini' }}
           PR_DOC_AGENT_AUTO_APPROVE_HITL: "true"
+          # Hard limit: agent may only write under Chess/AI-Generated/
           PR_DOC_AGENT_OUTPUT_ROOT: AI-Generated
-          PR_NUMBER: ${{ github.event_name == 'workflow_dispatch' && inputs.pr_number || github.event.issue.number }}
+          PR_NUMBER: ${{ steps.head.outputs.pr }}
           PR_COMMENT: ${{ github.event_name == 'workflow_dispatch' && inputs.comment || github.event.comment.body }}
         run: |
           pr-doc-agent github-run \
